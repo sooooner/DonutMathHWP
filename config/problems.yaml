@@ -1,0 +1,19 @@
+sort_json_key: False 
+train_batch_size: 1
+val_batch_size: 1
+input_size: [480, 480] 
+max_length: 820 
+align_long_axis: False
+num_nodes: 1
+seed: 2024
+lr: 1e-5
+start_token: '<s_problems>'
+warmup_steps: 15900 # 10600/1*15/10, 10%
+num_training_samples_per_epoch: 10600
+num_validation: 144
+max_epochs: 15
+max_steps: -1
+num_workers: 0
+val_check_interval: 1.0
+check_val_every_n_epoch: 1
+gradient_clip_val: 1.0
