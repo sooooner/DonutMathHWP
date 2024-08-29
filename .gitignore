@@ -109,7 +109,6 @@ ehthumbs.db
 # Ignore specific directories
 api/
 models/
-sample/
 dataset/math/
 dataset/mock_exam_data/
 dataset/tmp/
