@@ -12,7 +12,6 @@ def list_all_files(directory):
         for file in files:
             file_path = os.path.join(root, file)
             file_paths.append(file_path)
-    
     return file_paths
 
 def delect_all_files(directory):

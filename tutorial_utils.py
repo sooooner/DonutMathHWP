@@ -1,5 +1,6 @@
 import re
 import torch
+import numpy as np
 from PIL import Image
 from dataset.hwp import create_uuid_key
 from optimum.onnxruntime import ORTModelForVision2Seq
@@ -117,9 +118,7 @@ class Image2Text:
         config = VisionEncoderDecoderConfig.from_pretrained(model_path)
         processor = DonutProcessor.from_pretrained(model_path)
 
-        if 'onnx' in model_path:
-            model = ORTModelForVision2Seq.from_pretrained(model_path, use_cache=False, config=config).to(self.device)
-        elif 'quantized'in model_path:
+        if ('onnx' in model_path) or ('quantized'in model_path):
             model = ORTModelForVision2Seq.from_pretrained(model_path, use_cache=True, config=config).to(self.device)
         else:
             model = VisionEncoderDecoderModel.from_pretrained(model_path, config=config).to(self.device)
@@ -127,7 +126,10 @@ class Image2Text:
         return model, processor
 
     def load_img(self, img_path, width=480, height=480):
-        image = Image.open(img_path)
+        if type(img_path) == np.ndarray:
+            image = Image.fromarray(img_path)
+        else:
+            image = Image.open(img_path)
         image = aspect_ratio_preserving_resize_and_crop(image, target_width=width, target_height=height)
         img = self.processor(image.convert("RGB"), return_tensors="pt", size=(width, height)).pixel_values
         pixel_values = img.to(self.device)
