@@ -6,6 +6,7 @@ gradio==4.39.0
 jsonlines==4.0.0
 latex2mathml==3.77.0
 ml-collections==0.1.1
+onnx==1.16.2
 onnxconverter-common==1.14.0
 onnxruntime==1.18.1
 onnxruntime-gpu==1.18.1

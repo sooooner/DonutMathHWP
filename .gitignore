@@ -106,9 +106,6 @@ target/
 Thumbs.db
 ehthumbs.db
 
-# Custom files
-prompt.py
-
 # Ignore specific directories
 api/
 models/
