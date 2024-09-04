@@ -21,7 +21,7 @@ DonutMathHWP는 수식을 포함한 수식 이미지에서 hwp수식 처리를 �
 git clone https://github.com/sooooner/DonutMathHWP.git
 cd DonutMathHWP
 pip install -r requirements.txt
-```
+```cdc
 
 ### 데이터셋 생성
 1. 데이터셋 생성을 위해 모의고사 hwp 파일을 dataste/mock_exam_data 디렉토리에 수집합니다.
