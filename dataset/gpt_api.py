@@ -3,8 +3,7 @@ import time
 import json
 from openai import OpenAI
 
-from .path import json_folder, metadata_path
-from .prompt import system_example
+from .path import json_folder
 
 
 

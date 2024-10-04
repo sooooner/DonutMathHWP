@@ -2,13 +2,30 @@ import re
 import html
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from .extract_coordinate import extract_positions
+from .extract_coordinate import extract_positions, get_endnote_positions
 
 attributes_to_remove = ['style', 'src', 'alt', 'border', 'data-formula-baseunit', 
                         'data-formula-color', 'data-formula-linemode', 'height', 
                         'hspace', 'vspace', 'width', 'viewbox', 'd',
                         'id', 'fill', 'x', 'y', 'patternunits', 'xlink', 'preserveaspectratio', 'patterncontentunits']
 
+def split_problems(data):
+    problems = []
+    current_problem = []
+    
+    for line in data:
+        if re.match(r'^\d+\)', line):
+            if current_problem:
+                problems.append(current_problem)
+            current_problem = [line]  
+        else:
+            if current_problem:
+                current_problem.append(line)
+                
+    if current_problem:
+        problems.append(current_problem)
+    
+    return problems
 
 class HtmlPhaser():
     def __init__(self, html_content):
@@ -74,7 +91,7 @@ class HtmlPhaser():
                 new_text = new_text.replace(uid, f"${uid}$")
             elem.replace_with(new_text)
 
-    def process_div_elements(self, line_break_classes_list):
+    def clean_html_tags(self):
         divs = self.soup.body.find_all('div', recursive=False)
         for div in divs:
             for tag in div.find_all(['div', 'span', 'p']):
@@ -84,7 +101,10 @@ class HtmlPhaser():
                     tag.attrs = {}
                 elif tag.name == 'div' and tag.get('class') == ['heq']:
                     tag.extract()
+        return divs
 
+    def process_div_elements(self, line_break_classes_list):
+        divs = self.clean_html_tags()
         divs = divs[:sum([len(div.find_all('div', class_='hhe')) > 0 for div in divs])]
         pattern_ = "|".join([f'(<div class="{" ".join(class_pair)}"></div>){{{3}}}' for class_pair in line_break_classes_list])
         pattern = rf'(<div class="hhe">.*?)(?={pattern_})'
@@ -132,7 +152,8 @@ class HtmlPhaser():
                 return True
         return False
 
-    def replace_unicode_spaces(self, text):
+    @staticmethod
+    def replace_unicode_spaces(text):
         unicode_spaces = [
             '\u0020',  # 공백(space)
             '\u00A0',  # 비분리 공백(no-break space)
@@ -199,3 +220,40 @@ class HtmlPhaser():
         pages = self.replace_image_tag(divs)
         pages = [[self.remove_newlines_inside_dollars(problem) for problem in page] for page in pages]
         return pages, pages_positions
+
+    def extract_endnote_info(self, uuid_to_eqn):
+        endnote_positions = get_endnote_positions(self.soup)
+
+        html_str = str(self.soup)
+        for uid in uuid_to_eqn:
+            html_str = html_str.replace(uid, f"${uid}$")
+        self.soup = BeautifulSoup(html_str, 'html.parser')
+
+        self.remove_attributes(attributes_to_remove)
+        divs = self.clean_html_tags()
+
+        pages = []
+        for problem in divs:
+            soup_ = BeautifulSoup(str(problem), 'html.parser')
+            for tag in soup_.find_all(['div', 'path']):
+                if not self.should_keep_tag(tag):
+                    tag.decompose()
+            pages.append(HtmlPhaser.replace_unicode_spaces(html.unescape(str(soup_)))[17:])
+
+        pages = [self.replace_images_with_placeholder(problem) for problem in pages]
+        pages = [self.simplify_image_tags(problem) for problem in pages]
+
+        endnotes = []
+        for page in pages:
+            soup_ = BeautifulSoup(page, 'html.parser')
+
+            text_parts = []
+            for div in soup_.find_all(string=True):
+                text_parts.append(div.get_text())
+
+            solutions = split_problems(text_parts)
+            solutions = ['\n'.join(solution[1:]) for solution in solutions]
+            endnotes.append(solutions)
+        endnotes = [endnote for endnote in endnotes if len(endnote) > 0]
+
+        return endnotes, endnote_positions

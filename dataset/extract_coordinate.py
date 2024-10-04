@@ -5,6 +5,57 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 import re
 
+SPACE_WIDTH = 1.17   # 띄어쓰기
+CHAR_WIDTH = 3.457839105  # 글자 하나 (알파벳, 숫자 등)
+SYMBOL_WIDTH = 0.85  # 기호
+
+def extract_width_from_style(style):
+    """style 속성에서 width 값을 추출하는 함수"""
+    if 'width:' in style:
+        width_str = style.split('width:')[1].split('mm')[0].strip()
+        return float(width_str)
+    return None
+    
+def calculate_width(div):
+    total_width = 0.0
+    
+    # 모든 span과 div 요소들을 순차적으로 처리
+    for element in div.find_all(['span', 'div']):
+        if element.name == 'span':
+            # span 요소에 style 속성이 있는지 확인
+            style = element.get('style')
+            if style and 'width:' in style:
+                # style 속성에서 width 값을 추출하여 사용
+                width = extract_width_from_style(style)
+                total_width += width
+            else:
+                # style이 없으면 텍스트 길이를 계산 (cs2의 경우는 폰트 크기 0pt라 무시)
+                if 'cs2' not in element['class']:
+                    # text_length = len(element.get_text(strip=True))
+                    # width = text_length * CHAR_WIDTH
+                    # total_width += width
+                    text = element.get_text()
+                    for char in text:
+                        if char.isspace():  # 띄어쓰기
+                            total_width += SPACE_WIDTH
+                        elif char.isalnum():  # 문자 (알파벳, 숫자 등)
+                            total_width += CHAR_WIDTH
+                        else:  # 그 외 기호
+                            total_width += SYMBOL_WIDTH
+        
+        elif element.name == 'div':
+            # div 요소의 width 스타일 속성 값을 추출하여 더함
+            style = element.get('style')
+            if style and 'width:' in style:
+                width = extract_width_from_style(style)
+                total_width += width + SPACE_WIDTH
+
+    return total_width
+    
+def calculate_height(div):
+    _, height = get_page_dimensions(div)
+    return height
+
 def extract_style_attributes(style, page_width=0, page_height=0):
     attributes = {
         'left': 0,
@@ -121,6 +172,83 @@ def extract_positions(soup, stop_classes):
         pages_positions.append(problem_positions)
     pages_positions = [position for position in pages_positions if len(position) > 0]
     return pages_positions
+
+
+def get_accumulated_coordinates(element, page_width, page_height):
+    accumulated_left = 0
+    accumulated_top = 0
+    current_element = element
+    first_div_height = 0
+
+    while current_element:
+        style = current_element.get('style', '')
+        if style:
+            attributes = extract_style_attributes(style, page_width, page_height)
+            accumulated_left += attributes['left']
+            accumulated_top += attributes['top']
+            if first_div_height == 0:
+                first_div_height = attributes['height']
+        current_element = current_element.find_parent()
+
+    accumulated_top += first_div_height
+
+    if page_width != 0 and page_height != 0:
+        accumulated_left_ratio = accumulated_left / page_width
+        accumulated_top_ratio = accumulated_top / page_height
+        return accumulated_left_ratio, accumulated_top_ratio, first_div_height
+    return 0, 0, 0
+
+def find_problem_coordinates_and_height(soup, page_width, page_height):
+    problems = []
+
+    pattern = re.compile(r'^\d+\)')
+
+    flag = False
+    divs = soup.find_all('div', class_='hls')
+    cur_problem = None
+    cur_width = 0
+    for div in divs:
+        span = div.find('span', string=pattern)
+        if span:
+            if flag:
+                cur_height -= 8
+                cur_height_ratio =  cur_height / page_height
+                cur_width_ratio = cur_width / page_width
+                cur_problem['y2'] = cur_problem['y1'] + cur_height_ratio
+                cur_problem['x2'] = cur_problem['x1'] + cur_width_ratio
+                problems.append(cur_problem)
+                cur_width = 0
+
+            accumulated_left_ratio, accumulated_top_ratio, height = get_accumulated_coordinates(div, page_width, page_height)
+            
+            flag = True
+            cur_height = 0
+            cur_problem = {
+                'x1': accumulated_left_ratio, 
+                'y1': accumulated_top_ratio
+            }
+        
+        if flag:
+            cur_width = max(cur_width, calculate_width(div))
+            cur_height += calculate_height(div) + 1.77
+
+    if cur_problem is not None:
+        cur_height -= 4
+        cur_height_ratio =  cur_height / page_height
+        cur_width_ratio = cur_width / page_width
+        cur_problem['y2'] = cur_problem['y1'] + cur_height_ratio
+        cur_problem['x2'] = cur_problem['x1'] + cur_width_ratio
+        problems.append(cur_problem)
+    return problems
+
+def get_endnote_positions(soup):
+    positions = []
+    for div in soup.body.find_all('div', recursive=False):
+        page_width, page_height = get_page_dimensions(div)
+        problems = find_problem_coordinates_and_height(div, page_width, page_height)
+        positions.append([[problem['x1'], problem['y1'], problem['x2'], problem['y2']] for problem in problems])
+
+    return [position for position in positions if len(position) > 0]
 
 
 def draw_rectangle_and_display(image_path, coordinates):

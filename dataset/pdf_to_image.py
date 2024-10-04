@@ -9,19 +9,27 @@ import matplotlib.pyplot as plt
 def read_pdf(file_path):
     return fitz.open(file_path)
 
-def convert_to_pixel_coordinates(page, coords):
+def convert_to_pixel_coordinates(page, coords, endnote=False):
     page_width = page.rect.width
     page_height = page.rect.height
-    return [(
-        int((x1 - random.uniform(0.005, 0.01)) * page_width),
-        int((y1 - random.uniform(0.005, 0.015)) * page_height),
-        int((x2 + random.uniform(0.005, 0.01)) * page_width),
-        int((y2 + random.uniform(0.005, 0.015)) * page_height)
-    ) for x1, y1, x2, y2 in coords]
+    if endnote:
+        return [(
+            int((x1 - random.uniform(0.01, 0.025)) * page_width),
+            int((y1 + 0.001) * page_height),
+            int((x2 + random.uniform(0.005, 0.01)) * page_width),
+            int((y2 + random.uniform(0.005, 0.01)) * page_height)
+        ) for x1, y1, x2, y2 in coords]
+    else:
+        return [(
+            int((x1 - random.uniform(0.005, 0.01)) * page_width),
+            int((y1 - random.uniform(0.005, 0.015)) * page_height),
+            int((x2 + random.uniform(0.005, 0.01)) * page_width),
+            int((y2 + random.uniform(0.005, 0.015)) * page_height)
+        ) for x1, y1, x2, y2 in coords]
 
-def extract_areas(page, coordinates):
+def extract_areas(page, coordinates, endnote=False):
     extracted_images = []
-    pixel_coords = convert_to_pixel_coordinates(page, coordinates)
+    pixel_coords = convert_to_pixel_coordinates(page, coordinates, endnote=endnote)
     for rect in pixel_coords:
         x1, y1, x2, y2 = rect
         clip = fitz.Rect(x1, y1, x2, y2)
@@ -31,17 +39,22 @@ def extract_areas(page, coordinates):
         extracted_images.append(img)
     return extracted_images
 
-def save_images(images, base_filename, idx, dpi=600):
-    for i, img in enumerate(images):
-        if img is not None:
-            img.save(f"{base_filename}_{idx}.png", dpi=(dpi, dpi))
+def save_images(images, base_file_path, idx, ignore_p_no=None):
+    if len(images) == 1:
+        if not ignore_p_no:
+            images[0].save(f"{base_file_path}_{idx}.png")
+    elif len(images) > 1:
+        for i, img in enumerate(images):
+            if i in ignore_p_no:
+                continue
+            img.save(f"{base_file_path}_{i}.png")
+    else: 
+        raise
+
 
 def aspect_ratio_preserving_resize_and_crop(image, target_width, target_height):
     # 현재 이미지의 크기
     width, height = image.size
-
-    # DPI 정보 저장
-    dpi = image.info.get('dpi', (600, 600))
 
     # 가로와 세로 중 더 많이 차이나는 쪽을 기준으로 비율 유지하면서 조정
     width_ratio = width / target_width
@@ -74,17 +87,7 @@ def aspect_ratio_preserving_resize_and_crop(image, target_width, target_height):
 
     padded_image.paste(resized_image, (offset_x, offset_y))
 
-    if dpi:
-        padded_image.info['dpi'] = dpi
-
     return padded_image
-
-def get_image_dpi(image):
-    info = image.info
-    if 'dpi' in info:
-        return info['dpi']
-    else:
-        return None
 
 def convert_pdf_pages_to_images_(input_pdf, output_folder, page_cnt=None, target_height=1754, target_width=1240, dpi=300):
     # PDF 문서 열기
