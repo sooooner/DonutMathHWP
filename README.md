@@ -13,8 +13,8 @@ DonutMathHWP는 수식을 포함한 수학 문제와 해설 이미지에서 HWP 
 - **Jupyter Notebook 튜토리얼**: 프로젝트 사용 방법을 안내하는 예제와 튜토리얼을 제공합니다.
 
 ## 📝 Result
-### 윗 첨자, 아랫 첨자, 분수 표현 결과
-<img src="https://github.com/user-attachments/assets/7740ef10-ba17-450e-8096-9c37ef99a029" width="40%"/>
+**윗 첨자, 아랫 첨자, 분수 표현 결과**  
+<img src="https://github.com/user-attachments/assets/7740ef10-ba17-450e-8096-9c37ef99a029" width="50%"/>
 
 ```
 3. 정적분 $int _{0} ^{2} {LEFT | x ^{2} -1 RIGHT |} dx$의 값은?
@@ -25,8 +25,8 @@ DonutMathHWP는 수식을 포함한 수학 문제와 해설 이미지에서 HWP 
 ⑤ ${5} over {2}$
 ```
 
-### 로만체 표현 결과
-<img src="https://github.com/user-attachments/assets/853dd200-d460-4aa4-8195-b6f54b836276" width="40%"/>
+**로만체 표현 결과**  
+<img src="https://github.com/user-attachments/assets/853dd200-d460-4aa4-8195-b6f54b836276" width="50%"/>
 
 ```
 8. 삼각형 $rm ABC$에서 $bar{rmAB}=2$, $angle rmB=90DEG$, $angle rmC=30DEG$이다. 점 $rmP$가 $rm vec{PB} +vec{PC} = vec0$를 만족시킬 때, $rm {left| vec{PA } right|}^{2}$의 값은?
@@ -34,8 +34,8 @@ DonutMathHWP는 수식을 포함한 수학 문제와 해설 이미지에서 HWP 
 ① $5$② $6$③ $7$④ $8$⑤ $9$
 ```
 
-### 이미지가 포함된 문제 예시
-<img src="https://github.com/user-attachments/assets/127f20bc-c80e-432b-9465-cdb8f9fc63cb" width="40%"/>
+**이미지가 포함된 문제 예시**  
+<img src="https://github.com/user-attachments/assets/127f20bc-c80e-432b-9465-cdb8f9fc63cb" width="50%"/>
 
 ```
 12. 이차함수 $y=f(x)$와 삼차함수 $y=g(x)$의 그래프가 그림과 같다.
@@ -75,7 +75,7 @@ $f(-1)=f(3)=0$이고, 함수 $g(x)$가 $x=3$에서 극솟값 $-2$를 가질 때,
     python train.py --config=config/train_config.json
     ```
     학습 결과  
-    <img src="https://github.com/user-attachments/assets/ff9d4281-3b3b-4b36-9919-b88670f29d95" width="80%"/>
+    <img src="https://github.com/user-attachments/assets/ff9d4281-3b3b-4b36-9919-b88670f29d95" width="90%"/>
 
 4. 한글 문서 자동화  
    + `AutoHWP_Tutorial.ipynb`를 통해 한글 문서 자동화를 실행할 수 있습니다.
