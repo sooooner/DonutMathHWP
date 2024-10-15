@@ -14,9 +14,9 @@ def convert_to_pixel_coordinates(page, coords, endnote=False):
     page_height = page.rect.height
     if endnote:
         return [(
-            int((x1 - random.uniform(0.01, 0.025)) * page_width),
-            int((y1 + 0.001) * page_height),
-            int((x2 + random.uniform(0.005, 0.01)) * page_width),
+            int((x1 - random.uniform(0.005, 0.01)) * page_width),
+            int((y1 + 0.0015) * page_height),
+            int((x2 + random.uniform(0.01, 0.015)) * page_width),
             int((y2 + random.uniform(0.005, 0.01)) * page_height)
         ) for x1, y1, x2, y2 in coords]
     else:
@@ -49,7 +49,7 @@ def save_images(images, base_file_path, idx, ignore_p_no=None):
                 continue
             img.save(f"{base_file_path}_{i}.png")
     else: 
-        raise
+        pass
 
 
 def aspect_ratio_preserving_resize_and_crop(image, target_width, target_height):

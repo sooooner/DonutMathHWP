@@ -3,11 +3,40 @@ from bs4 import BeautifulSoup
 import random
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
+import tinycss2
 import re
 
-SPACE_WIDTH = 1.17   # 띄어쓰기
-CHAR_WIDTH = 3.457839105  # 글자 하나 (알파벳, 숫자 등)
-SYMBOL_WIDTH = 0.85  # 기호
+# SPACE_WIDTH = 1.17   # 띄어쓰기
+# CHAR_WIDTH = 3.457839105  # 글자 하나 (알파벳, 숫자 등)
+# SYMBOL_WIDTH = 0.85  # 기호
+
+# 1mm: 3.7794975186104214px
+# 1px: 0.2645854363115609mm
+SPACE_WIDTH = 1   # 띄어쓰기
+CHAR_WIDTH = 3.3514155266131045  # 글자 하나 (알파벳, 숫자 등)
+SYMBOL_WIDTH = 1.058332925731699  # 기호
+NUM_WIDTH = 1.866253375023591
+
+def get_class_style(css_content, class_name):
+    # CSS 파싱
+    rules = tinycss2.parse_stylesheet(css_content, skip_whitespace=True)
+
+    class_style = {}
+    # 스타일 룰을 반복하여 특정 클래스의 스타일 찾기
+    for rule in rules:
+        if rule.type == 'qualified-rule':
+            # 선택자 파싱
+            selector = tinycss2.serialize(rule.prelude).strip()
+            if class_name in selector:
+                # 스타일 선언 파싱
+                declarations = tinycss2.parse_declaration_list(rule.content)
+                for declaration in declarations:
+                    if declaration.type == 'declaration':
+                        # declaration.value는 리스트 형태이므로, 이를 직렬화하여 처리
+                        value = tinycss2.serialize(declaration.value).strip()
+                        class_style[declaration.name] = value
+
+    return class_style
 
 def extract_width_from_style(style):
     """style 속성에서 width 값을 추출하는 함수"""
@@ -16,11 +45,17 @@ def extract_width_from_style(style):
         return float(width_str)
     return None
     
-def calculate_width(div):
+def calculate_width(div, css_content):
     total_width = 0.0
-    
+        
+    for attr in div.get('style', '').split(';'):
+        if 'left' in attr:
+            left = float(attr.split(':')[1].strip().replace('mm', ''))
+    total_width += left
+
     # 모든 span과 div 요소들을 순차적으로 처리
-    for element in div.find_all(['span', 'div']):
+    # for element in div.find_all(['span', 'div'], class_='hls'):
+    for element in div.find_all(['span', 'div'], recursive=False):
         if element.name == 'span':
             # span 요소에 style 속성이 있는지 확인
             style = element.get('style')
@@ -29,19 +64,17 @@ def calculate_width(div):
                 width = extract_width_from_style(style)
                 total_width += width
             else:
-                # style이 없으면 텍스트 길이를 계산 (cs2의 경우는 폰트 크기 0pt라 무시)
-                if 'cs2' not in element['class']:
-                    # text_length = len(element.get_text(strip=True))
-                    # width = text_length * CHAR_WIDTH
-                    # total_width += width
-                    text = element.get_text()
-                    for char in text:
-                        if char.isspace():  # 띄어쓰기
-                            total_width += SPACE_WIDTH
-                        elif char.isalnum():  # 문자 (알파벳, 숫자 등)
-                            total_width += CHAR_WIDTH
-                        else:  # 그 외 기호
-                            total_width += SYMBOL_WIDTH
+                text = element.get_text()
+                font_size = float(get_class_style(css_content, element['class'][-1])['font-size'][:-2])
+                for char in text:
+                    if char.isspace():  # 띄어쓰기
+                        total_width += (SPACE_WIDTH * font_size * 0.1)
+                    elif char.isnumeric():
+                        total_width += (NUM_WIDTH * font_size * 0.1)
+                    elif char.isalnum():  # 문자 (알파벳, 숫자 등)
+                        total_width += (CHAR_WIDTH * font_size * 0.1)
+                    else:  # 그 외 기호
+                        total_width += (SYMBOL_WIDTH * font_size * 0.1)
         
         elif element.name == 'div':
             # div 요소의 width 스타일 속성 값을 추출하여 더함
@@ -198,13 +231,14 @@ def get_accumulated_coordinates(element, page_width, page_height):
         return accumulated_left_ratio, accumulated_top_ratio, first_div_height
     return 0, 0, 0
 
-def find_problem_coordinates_and_height(soup, page_width, page_height):
+def find_problem_coordinates_and_height(soup, page_width, page_height, css_content):
     problems = []
 
     pattern = re.compile(r'^\d+\)')
 
     flag = False
-    divs = soup.find_all('div', class_='hls')
+    # divs = soup.find_all('div', class_='hls')
+    divs = soup.div.div.find_all('div', class_='hls', recursive=False)
     cur_problem = None
     cur_width = 0
     for div in divs:
@@ -229,7 +263,7 @@ def find_problem_coordinates_and_height(soup, page_width, page_height):
             }
         
         if flag:
-            cur_width = max(cur_width, calculate_width(div))
+            cur_width = max(cur_width, calculate_width(div, css_content))
             cur_height += calculate_height(div) + 1.77
 
     if cur_problem is not None:
@@ -241,14 +275,26 @@ def find_problem_coordinates_and_height(soup, page_width, page_height):
         problems.append(cur_problem)
     return problems
 
-def get_endnote_positions(soup):
+def modify_positions(positions):
+    modify_idx = []
+    for idx, pos in enumerate(positions):
+        if pos[3] - pos[1] <  0.05:
+            modify_idx.append(idx)
+    
+    for idx in modify_idx:
+        positions[idx] = []
+    return positions
+
+def get_endnote_positions(soup, css_content=None):
     positions = []
     for div in soup.body.find_all('div', recursive=False):
         page_width, page_height = get_page_dimensions(div)
-        problems = find_problem_coordinates_and_height(div, page_width, page_height)
+        problems = find_problem_coordinates_and_height(div, page_width, page_height, css_content)
         positions.append([[problem['x1'], problem['y1'], problem['x2'], problem['y2']] for problem in problems])
 
-    return [position for position in positions if len(position) > 0]
+    # positions = [position for position in positions if len(position) > 0]
+    positions = [modify_positions(position) for position in positions]
+    return positions
 
 
 def draw_rectangle_and_display(image_path, coordinates):

@@ -15,7 +15,7 @@ def create_uuid_key(uuid_to_eqn):
     is_in = True
     is_digit = True
     while is_in or is_digit:
-        uid = uuid.uuid4().hex[:4]
+        uid = uuid.uuid4().hex[:5]
         is_digit = uid.isdigit()
         is_in = uid in uuid_to_eqn.keys()
     return uid
@@ -77,7 +77,7 @@ class Hwp():
         self.hwp.HAction.GetDefault("InsertText", self.hwp.HParameterSet.HInsertText.HSet)
         self.hwp.HParameterSet.HInsertText.Text = uid
         self.hwp.HAction.Execute("InsertText", self.hwp.HParameterSet.HInsertText.HSet)
-        
+
     def insert_text(self, text):
         self.hwp.HParameterSet.HInsertText.Text = text
         self.hwp.HAction.Execute("InsertText", self.hwp.HParameterSet.HInsertText.HSet)
@@ -237,11 +237,14 @@ class Hwp():
     def extract_endnote_html(self, hwp_path, visible=False):
         basename = get_basename(hwp_path)
         endnote_html_file_path = os.path.join(tmp_dir, basename) + '_endnote.html'
+        endnote_css_file_path = os.path.join(tmp_dir, basename) + '_endnote_style.css'
         endnote_file_path = os.path.join(tmp_dir, basename) + '_endnote.hwp'
         endnote_pdf_file_path = os.path.join(endnote_pdf_folder, basename) + '.pdf'
 
         self.run_hwp(endnote_file_path, visible=visible)
         self.set_hwp_page_margins()
+        # 쪽 번호 지우기
+        self.delect_formatting([(0, 47), (1, 49)])
 
         self.save_as_pdf(endnote_pdf_file_path)
         uuid_to_eqn = self.extract_uuid_to_eqn()
@@ -251,7 +254,10 @@ class Hwp():
         with open(endnote_html_file_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
 
+        with open(endnote_css_file_path, 'r', encoding='utf-8') as file:
+            css_content = file.read()
+
         self.hwp.Clear(1)
         self.hwp.Quit()
 
-        return html_content, uuid_to_eqn
+        return html_content, uuid_to_eqn, css_content

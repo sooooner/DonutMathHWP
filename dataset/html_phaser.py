@@ -28,8 +28,9 @@ def split_problems(data):
     return problems
 
 class HtmlPhaser():
-    def __init__(self, html_content):
+    def __init__(self, html_content, css_content=None):
         self.soup = BeautifulSoup(html_content, 'html.parser')
+        self.css_content = css_content
 
     def find_consecutive_classes(self, div_classes, threshold=4):
         if not div_classes:
@@ -222,7 +223,7 @@ class HtmlPhaser():
         return pages, pages_positions
 
     def extract_endnote_info(self, uuid_to_eqn):
-        endnote_positions = get_endnote_positions(self.soup)
+        endnote_positions = get_endnote_positions(self.soup, self.css_content)
 
         html_str = str(self.soup)
         for uid in uuid_to_eqn:
@@ -254,6 +255,10 @@ class HtmlPhaser():
             solutions = split_problems(text_parts)
             solutions = ['\n'.join(solution[1:]) for solution in solutions]
             endnotes.append(solutions)
-        endnotes = [endnote for endnote in endnotes if len(endnote) > 0]
+        # endnotes = [endnote for endnote in endnotes if len(endnote) > 0]
+
+        empty_postions_idx = [(i, j) for i, endnote_position in enumerate(endnote_positions) for j, position in enumerate(endnote_position) if len(position) == 0]
+        endnotes = [[en for j, en in enumerate(endnote) if (i, j) not in empty_postions_idx] for i, endnote in enumerate(endnotes)]
+        endnote_positions = [[p for p in position if len(p) != 0] for position in endnote_positions]
 
         return endnotes, endnote_positions
