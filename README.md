@@ -3,6 +3,7 @@ DonutMathHWP는 수식을 포함한 수학 문제와 해설 이미지에서 HWP 
 이 프로젝트는 데이터셋 생성, 모델 학습, 한글 문서 자동화 예제 등을 포함한 다양한 기능을 제공합니다.
 
 ## 📚 Project Overview
+DonutMathHWP 데모 사이트에서 기능을 직접 확인해 보세요: [HuggingFace Space](https://huggingface.co/spaces/sooooner/DonutMathHWP) | [HWP 자동화 데모](http://hwpmath.duckdns.org/)
 + 모델: Donut 아키텍처를 기반으로 하여 HWP 데이터셋에 대해 미세 조정된 모델입니다.
 + 학습 과정: Nougat 데이터셋으로 모델이 이미지에서 글을 읽는 방법을 학습하였고, HWP 데이터셋으로 수식 인식이 학습되었습니다.
 
